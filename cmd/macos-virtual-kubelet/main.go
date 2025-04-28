@@ -43,20 +43,42 @@ var (
 	errNotImplemented = fmt.Errorf("not implemented by macOS provider")
 )
 
+type plistSocket struct {
+	SockServiceName string `plist:"Label"`
+	SockType        string `plist:"Label"`
+	SockFamily      string `plist:"Label"`
+}
+
+// Supported resource constraints:
+// CPU: CPU time in seconds
+// ResidentSetSize: Memory in bytes
+// NumberOfFiles: Maximum number of open files
+// NumberOfProcesses: Maximum number of simultatneous processes for this user ID?
+
+// https://manpagez.com/man/5/launchd.plist/
 type plistAgent struct {
-	EnvironmentVariables  map[string]string `plist:"EnvironmentVariables"`
-	KeepAlive             bool              `plist:"KeepAlive"`
-	Label                 string            `plist:"Label"`
-	ProgramArguments      []string          `plist:"ProgramArguments"`
-	RunAtLoad             bool              `plist:"RunAtLoad"`
-	StandardErrorPath     string            `plist:"StandardErrorPath"`
-	StandardOutPath       string            `plist:"StandardOutPath"`
-	ThrottleInterval      int               `plist:"ThrottleInterval"`
-	KubernetesName        string            `plist:"KubernetesName"`
-	KubernetesNamespace   string            `plist:"KubernetesNamespace"`
-	KubernetesUID         string            `plist:"KubernetesUID"`
-	KubernetesLabels      map[string]string `plist:"KubernetesLabels"`
-	KubernetesAnnotations map[string]string `plist:"KubernetesAnnotations"`
+	EnvironmentVariables     map[string]string      `plist:"EnvironmentVariables"`
+	KeepAlive                bool                   `plist:"KeepAlive"`
+	Label                    string                 `plist:"Label"`
+	ProgramArguments         []string               `plist:"ProgramArguments"`
+	RunAtLoad                bool                   `plist:"RunAtLoad"`
+	StandardErrorPath        string                 `plist:"StandardErrorPath"`
+	StandardOutPath          string                 `plist:"StandardOutPath"`
+	ThrottleInterval         int                    `plist:"ThrottleInterval"`
+	Debug                    bool                   `plist:"Debug"`
+	SoftResourceLimits       map[string]int         `plist:"SoftResourceLimits"`
+	HardResourceLimits       map[string]int         `plist:"HardResourceLimits"`
+	Listeners                map[string]plistSocket `plist:"Sockets"`
+	KubernetesName           string                 `plist:"KubernetesName"`
+	KubernetesNamespace      string                 `plist:"KubernetesNamespace"`
+	KubernetesUID            string                 `plist:"KubernetesUID"`
+	KubernetesLabels         map[string]string      `plist:"KubernetesLabels"`
+	KubernetesAnnotations    map[string]string      `plist:"KubernetesAnnotations"`
+	KubernetesContainerName  string                 `plist:"KubernetesContainerName"`
+	KubernetesContainerImage string                 `plist:"KubernetesContainerImage"`
+	WorkingDirectory         string                 `plist:"WorkingDirectory"`
+	ExitTimeOut              int                    `plist:"ExitTimeOut"`
+	ProcessType              string                 `plist:"ProcessType"`
 }
 
 func xmlToPod(path string) *corev1.Pod {
@@ -98,8 +120,90 @@ func xmlToPod(path string) *corev1.Pod {
 			Labels:      agent.KubernetesLabels,
 			Annotations: agent.KubernetesAnnotations,
 		},
-		Spec:   corev1.PodSpec{},
-		Status: corev1.PodStatus{},
+		Spec: corev1.PodSpec{
+			Volumes:        []corev1.Volume{},
+			InitContainers: []corev1.Container{},
+			Containers: []corev1.Container{
+				// @todo: rest of this translation
+				{
+					Name:                     agent.KubernetesContainerName,
+					Image:                    agent.KubernetesContainerImage,
+					Command:                  agent.ProgramArguments,
+					Args:                     []string{},
+					WorkingDir:               agent.WorkingDirectory,
+					Ports:                    []corev1.ContainerPort{},
+					EnvFrom:                  []corev1.EnvFromSource{},
+					Env:                      []corev1.EnvVar{},
+					Resources:                corev1.ResourceRequirements{},
+					ResizePolicy:             []corev1.ContainerResizePolicy{},
+					VolumeMounts:             []corev1.VolumeMount{},
+					VolumeDevices:            []corev1.VolumeDevice{},
+					LivenessProbe:            &corev1.Probe{},
+					ReadinessProbe:           &corev1.Probe{},
+					StartupProbe:             &corev1.Probe{},
+					Lifecycle:                &corev1.Lifecycle{},
+					TerminationMessagePath:   path,
+					TerminationMessagePolicy: "",
+					ImagePullPolicy:          "",
+					SecurityContext:          &corev1.SecurityContext{},
+					Stdin:                    false,
+					StdinOnce:                false,
+					TTY:                      false,
+				},
+			},
+			EphemeralContainers:           []corev1.EphemeralContainer{},
+			RestartPolicy:                 "",
+			TerminationGracePeriodSeconds: new(int64),
+			ActiveDeadlineSeconds:         new(int64),
+			DNSPolicy:                     "",
+			NodeSelector:                  map[string]string{},
+			ServiceAccountName:            "",
+			DeprecatedServiceAccount:      "",
+			AutomountServiceAccountToken:  new(bool),
+			NodeName:                      "",
+			HostNetwork:                   false,
+			HostPID:                       false,
+			HostIPC:                       false,
+			ShareProcessNamespace:         new(bool),
+			SecurityContext:               &corev1.PodSecurityContext{},
+			ImagePullSecrets:              []corev1.LocalObjectReference{},
+			Hostname:                      "",
+			Subdomain:                     "",
+			Affinity:                      &corev1.Affinity{},
+			SchedulerName:                 "",
+			Tolerations:                   []corev1.Toleration{},
+			HostAliases:                   []corev1.HostAlias{},
+			PriorityClassName:             "",
+			Priority:                      new(int32),
+			DNSConfig:                     &corev1.PodDNSConfig{},
+			ReadinessGates:                []corev1.PodReadinessGate{},
+			RuntimeClassName:              new(string),
+			EnableServiceLinks:            new(bool),
+			PreemptionPolicy:              nil,
+			Overhead:                      corev1.ResourceList{},
+			TopologySpreadConstraints:     []corev1.TopologySpreadConstraint{},
+			SetHostnameAsFQDN:             new(bool),
+			OS:                            &corev1.PodOS{},
+			HostUsers:                     new(bool),
+			SchedulingGates:               []corev1.PodSchedulingGate{},
+			ResourceClaims:                []corev1.PodResourceClaim{},
+		},
+		Status: corev1.PodStatus{
+			Phase:                      "",
+			Conditions:                 []corev1.PodCondition{},
+			Message:                    "",
+			Reason:                     "",
+			NominatedNodeName:          "",
+			HostIP:                     "",
+			PodIP:                      "",
+			PodIPs:                     []corev1.PodIP{},
+			StartTime:                  &v1.Time{},
+			InitContainerStatuses:      []corev1.ContainerStatus{},
+			ContainerStatuses:          []corev1.ContainerStatus{},
+			QOSClass:                   "",
+			EphemeralContainerStatuses: []corev1.ContainerStatus{},
+			Resize:                     "",
+		},
 	}
 }
 
