@@ -130,8 +130,6 @@ func (p *MacOSProvider) DeletePod(ctx context.Context, pod *corev1.Pod) error {
 }
 
 func (p *MacOSProvider) GetPod(ctx context.Context, namespace, name string) (*corev1.Pod, error) {
-	log.G(ctx).Infof("Received GetPod request for %s/%s.\n", namespace, name)
-
 	pod, err := xmlToPod(path.Join(launchAgentsPath, fmt.Sprintf("%s.plist", getServiceLabelForNamespaceAndName(namespace, name))))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -163,11 +161,8 @@ type plistAgentStatus struct {
 }
 
 func (p *MacOSProvider) GetPodStatus(ctx context.Context, namespace, name string) (*corev1.PodStatus, error) {
-	log.G(ctx).Infof("Received GetPodStatus request for %s/%s.\n", namespace, name)
-
 	launchCmd := exec.Command("launchctl", "list", getServiceLabelForNamespaceAndName(namespace, name))
 	output, err := launchCmd.Output()
-	log.G(ctx).Infof("'launchctl list' output: %s", output)
 	if err != nil {
 		log.G(ctx).Errorf("Failed to query pod status: %s", err)
 		return nil, err
@@ -189,7 +184,6 @@ func (p *MacOSProvider) GetPodStatus(ctx context.Context, namespace, name string
 	}
 
 	statusplist := strings.Join(linesStripped[:], "\n")
-	log.G(ctx).Infof("'launchctl list' stripped for parsing: %s", statusplist)
 
 	var agentStatus plistAgentStatus
 	_, err = plist.Unmarshal([]byte(statusplist), &agentStatus)
