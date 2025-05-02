@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mac-test
+  namespace: default
+spec:
+  hostNetwork: true
+  nodeSelector:
+    kubernetes.io/os: darwin
+  terminationGracePeriodSeconds: 5
+  automountServiceAccountToken: false
+  containers:
+  - name: mac-test
+    image: scratch # not yet used
+    command:
+    - /bin/bash
+    - -c
+    - echo "hello world"
+    env:
+    - name: SOME_ENV
+      value: blah
+  imagePullSecrets:
+    - name: gitlab
