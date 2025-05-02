@@ -1,0 +1,28 @@
+# This cluster role binding is necessary to allow virtual kubelet to sync configmaps and secrets across the entire cluster. If you don't apply this cluster role and cluster role binding, you'll see warnings when trying to run the kubelet.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: macos-virtual-kubelet
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: macos-virtual-kubelet
+subjects:
+- kind: Group
+  name: system:nodes
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: macos-virtual-kubelet
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
